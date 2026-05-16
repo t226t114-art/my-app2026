@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日のご飯メーカー | 食材からレシピ提案</title>
+    <!-- Tailwind CSSの読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* カスタムアニメーション */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-amber-50 font-sans text-gray-800 min-h-screen">
+    
+    <!-- ヘッダー -->
+    <header class="bg-orange-500 text-white shadow-md">
+        <div class="max-w-3xl mx-auto p-4 flex items-center justify-center gap-2">
+            <span class="text-3xl">🍳</span>
+            <h1 class="text-xl md:text-2xl font-bold tracking-wider">今日のご飯メーカー</h1>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto p-4 md:p-6 py-8 md:py-12">
+        <!-- 入力エリア -->
+        <div class="bg-white rounded-3xl shadow-xl p-6 md:p-8 mb-8 border border-orange-100 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-300 to-orange-500"></div>
+            
+            <label for="ingredientsInput" class="block text-xl md:text-2xl font-bold text-gray-800 mb-3 text-center">
+                冷蔵庫にある食材は何ですか？
+            </label>
+            <p class="text-center text-gray-500 mb-6 text-sm md:text-base">
+                使いたい食材をスペースや「、」で区切って入力してください。<br>
+                <span class="text-orange-500 font-medium text-xs">例：お肉 にんじん 玉ねぎ</span>
+            </p>
+            
+            <div class="relative">
+                <input type="text" id="ingredientsInput" 
+                    placeholder="例: 豚肉、白菜、きのこ" 
+                    class="w-full border-2 border-orange-200 rounded-2xl p-4 md:p-5 text-lg md:text-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all shadow-inner"
+                    autocomplete="off">
+            </div>
+
+            <!-- ジャンル選択（追加部分） -->
+            <div class="mt-5">
+                <p class="text-sm font-bold text-gray-700 mb-2">食べたいジャンルは？</p>
+                <div class="flex flex-wrap gap-2" id="genreRadios">
+                    <label class="flex-1 cursor-pointer min-w-[70px]">
+                        <input type="radio" name="genre" value="all" class="peer hidden" checked>
+                        <div class="text-center py-2 px-3 rounded-xl border-2 border-gray-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:text-orange-700 font-bold text-gray-500 transition-all">すべて</div>
+                    </label>
+                    <label class="flex-1 cursor-pointer min-w-[70px]">
+                        <input type="radio" name="genre" value="和食" class="peer hidden">
+                        <div class="text-center py-2 px-3 rounded-xl border-2 border-gray-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:text-orange-700 font-bold text-gray-500 transition-all">和食</div>
+                    </label>
+                    <label class="flex-1 cursor-pointer min-w-[70px]">
+                        <input type="radio" name="genre" value="洋食" class="peer hidden">
+                        <div class="text-center py-2 px-3 rounded-xl border-2 border-gray-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:text-orange-700 font-bold text-gray-500 transition-all">洋食</div>
+                    </label>
+                    <label class="flex-1 cursor-pointer min-w-[70px]">
+                        <input type="radio" name="genre" value="中華" class="peer hidden">
+                        <div class="text-center py-2 px-3 rounded-xl border-2 border-gray-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 peer-checked:text-orange-700 font-bold text-gray-500 transition-all">中華</div>
+                    </label>
+                </div>
+            </div>
+            
+            <button id="searchBtn" class="mt-6 w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:-translate-y-1 hover:shadow-xl active:translate-y-0 active:shadow-md text-lg md:text-xl flex items-center justify-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>料理を考えてもらう！</span>
+            </button>
+        </div>
+
+        <!-- ローディング表示 -->
+        <div id="loadingArea" class="hidden text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500 mb-4"></div>
+            <p class="text-orange-600 font-bold text-lg animate-pulse">美味しいレシピを探しています...</p>
+        </div>
+
+        <!-- 結果表示エリア -->
+        <div id="resultArea" class="hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 px-2 gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">✨</span>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">こんな料理はどうですか？</h2>
+                </div>
+                
+                <!-- 並び替え（ソート）用のプルダウンを追加 -->
+                <select id="sortSelect" class="bg-white border-2 border-orange-200 rounded-xl px-4 py-2 text-gray-700 focus:outline-none focus:border-orange-500 font-bold shadow-sm transition-colors cursor-pointer">
+                    <option value="score">💡 おすすめ順</option>
+                    <option value="time">⏱️ 時間が短い順</option>
+                    <option value="favorite">⭐ お気に入り優先</option>
+                </select>
+            </div>
+            
+            <!-- 提案リストがここに追加されます -->
+            <div id="recipeList" class="space-y-4 md:space-y-6"></div>
+
+            <!-- もっと表示ボタン（追加部分） -->
+            <div class="text-center mt-8">
+                <button id="loadMoreBtn" class="hidden mx-auto bg-white border-2 border-orange-300 text-orange-600 font-bold py-3 px-8 rounded-full shadow hover:bg-orange-50 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <span>もっと表示する</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="text-center py-6 text-gray-400 text-sm mt-auto">
+        <p>© 2026 レシピサポーター</p>
+    </footer>
+
+    <!-- アプリのロジック (JavaScript) -->
+    <script>
+        // --- 1. レシピのデータベース（ジャンル・味付け・ID・数値の時間を追加） ---
+        const recipes = [
+            {
+                id: "recipe_01",
+                genre: "洋食",
+                name: "カレーライス",
+                tags: ["お肉", "肉", "豚肉", "牛肉", "鶏肉", "にんじん", "じゃがいも", "玉ねぎ", "ルー", "カレー粉"],
+                ingredientsText: "お肉、にんじん、じゃがいも、玉ねぎ",
+                seasonings: [
+                    "カレールー: 1/2箱",
+                    "水: 600ml (※ルーの箱を参照)",
+                    "サラダ油: 大さじ1"
+                ],
+                message: "定番のカレーはどうですか？スパイシーな香りでご飯が進みますよ！",
+                icon: "🍛",
+                time: "約30分",
+                timeMinutes: 30, // ソート用の数値
+                steps: [
+                    "お肉と野菜を一口大に切る",
+                    "鍋で油を熱し、お肉と野菜を炒める",
+                    "水を加えて具材が柔らかくなるまで約15分煮込む",
+                    "火を止め、ルーを溶かし入れてとろみがつくまで弱火で煮る"
+                ]
+            },
+            {
+                id: "recipe_02",
+                genre: "和食",
+                name: "ほっこり肉じゃが",
+                tags: ["お肉", "肉", "豚肉", "牛肉", "にんじん", "じゃがいも", "玉ねぎ", "しらたき"],
+                ingredientsText: "お肉、にんじん、じゃがいも、玉ねぎ",
+                seasonings: [
+                    "醤油: 大さじ3",
+                    "砂糖: 大さじ2",
+                    "酒: 大さじ2",
+                    "みりん: 大さじ1",
+                    "水: 300ml"
+                ],
+                message: "和食の王道ですね！お肉の旨味と野菜の甘みが染み込んで、ほっこり温まる一品です。",
+                icon: "🍲",
+                time: "約25分",
+                timeMinutes: 25,
+                steps: [
+                    "じゃがいも、にんじん、玉ねぎ、お肉を食べやすい大きさに切る",
+                    "鍋で油を熱し、お肉を炒め、色が変わったら野菜を加えて炒める",
+                    "水とすべての調味料を加える",
+                    "落とし蓋をして、煮汁が少なくなるまで中火で15分ほど煮込む"
+                ]
+            },
+            {
+                id: "recipe_03",
+                genre: "中華",
+                name: "具だくさん野菜炒め",
+                tags: ["お肉", "肉", "豚肉", "キャベツ", "にんじん", "もやし", "ピーマン", "玉ねぎ", "きのこ"],
+                ingredientsText: "お肉、お好みの野菜（キャベツ、にんじん等）",
+                seasonings: [
+                    "醤油: 小さじ2",
+                    "鶏ガラスープの素: 小さじ1",
+                    "塩こしょう: 少々",
+                    "ごま油: 大さじ1"
+                ],
+                message: "ささっと作れて栄養満点！塩こしょうだけでも、オイスターソースを絡めても美味しいです。",
+                icon: "🥬",
+                time: "約10分",
+                timeMinutes: 10,
+                steps: [
+                    "お肉と野菜を一口大のざく切りにする",
+                    "フライパンにごま油を熱し、お肉を炒める",
+                    "火の通りにくい野菜（にんじん等）から順に入れて強火でサッと炒める",
+                    "調味料をすべて入れ、全体に味が馴染んだら完成"
+                ]
+            },
+            {
+                id: "recipe_04",
+                genre: "和食",
+                name: "豚の生姜焼き",
+                tags: ["お肉", "肉", "豚肉", "玉ねぎ", "しょうが", "生姜", "キャベツ"],
+                ingredientsText: "豚肉、玉ねぎ、キャベツ（付け合わせ用）",
+                seasonings: [
+                    "醤油: 大さじ2",
+                    "みりん: 大さじ1",
+                    "酒: 大さじ1",
+                    "砂糖: 小さじ1",
+                    "すりおろし生姜: 小さじ1〜2"
+                ],
+                message: "ガッツリ食べたい時にぴったり！甘辛いタレと千切りキャベツの相性は抜群です。",
+                icon: "🍖",
+                time: "約15分",
+                timeMinutes: 15,
+                steps: [
+                    "玉ねぎは薄切りにする。調味料はすべて小鉢で混ぜておく",
+                    "フライパンで豚肉と玉ねぎを炒める",
+                    "お肉に火が通ったら、混ぜておいたタレを流し入れる",
+                    "少しとろみがつくまで全体によく絡め、千切りキャベツを添えて盛る"
+                ]
+            },
+            {
+                id: "recipe_05",
+                genre: "洋食",
+                name: "ジューシーハンバーグ",
+                tags: ["お肉", "肉", "ひき肉", "合挽き肉", "玉ねぎ", "卵", "パン粉", "牛乳"],
+                ingredientsText: "ひき肉、玉ねぎ",
+                seasonings: [
+                    "卵: 1個",
+                    "パン粉: 大さじ3",
+                    "牛乳: 大さじ2",
+                    "塩: 小さじ1/2",
+                    "こしょう: 少々",
+                    "ケチャップ・中濃ソース: 各大さじ2（ソース用）"
+                ],
+                message: "みんな大好きハンバーグ！ソースは肉汁が残ったフライパンで作るのがコツです。",
+                icon: "🥩",
+                time: "約30分",
+                timeMinutes: 30,
+                steps: [
+                    "玉ねぎをみじん切りにして炒め、粗熱をとる。パン粉と牛乳は合わせておく",
+                    "ボウルにひき肉、玉ねぎ、卵、パン粉(牛乳入り)、塩こしょうを入れ粘り気が出るまでよく混ぜる",
+                    "空気を抜きながら小判型に形を整える",
+                    "フライパンで両面に焼き色をつけ、少量の水を入れて蓋をし中火で蒸し焼きにする",
+                    "肉汁とケチャップ、ソースを混ぜてソースを作る"
+                ]
+            },
+            {
+                id: "recipe_06",
+                genre: "洋食",
+                name: "ふわとろオムライス",
+                tags: ["卵", "たまご", "鶏肉", "チキン", "玉ねぎ", "ご飯", "ごはん", "ケチャップ"],
+                ingredientsText: "卵、ご飯、鶏肉（またはウインナー）、玉ねぎ",
+                seasonings: [
+                    "ケチャップ: 大さじ3（ライス用）",
+                    "塩こしょう: 少々",
+                    "バター: 10g",
+                    "牛乳: 大さじ1（卵に混ぜる用）"
+                ],
+                message: "ふわふわ卵のオムライス！卵に少し牛乳を混ぜるとふわっと仕上がります。",
+                icon: "🍳",
+                time: "約20分",
+                timeMinutes: 20,
+                steps: [
+                    "鶏肉と玉ねぎを小さく切り、フライパンで炒める",
+                    "ご飯を加えて炒め、ケチャップと塩こしょうで味付けしてお皿に盛る",
+                    "ボウルで卵と牛乳をよく混ぜる",
+                    "別のフライパンにバターを熱し、卵を流し入れて半熟状にしたらチキンライスの上にのせる"
+                ]
+            },
+            {
+                id: "recipe_07",
+                genre: "中華",
+                name: "パラパラチャーハン",
+                tags: ["ご飯", "ごはん", "卵", "たまご", "お肉", "肉", "豚肉", "ウインナー", "ねぎ", "ネギ"],
+                ingredientsText: "ご飯、卵、ねぎ、お好みのお肉（ウインナーやハムでも）",
+                seasonings: [
+                    "醤油: 小さじ1",
+                    "鶏ガラスープの素: 小さじ1",
+                    "塩こしょう: 少々",
+                    "サラダ油: 大さじ1"
+                ],
+                message: "冷蔵庫の余り物でも美味しく作れる救世主！強火でサッと炒めてパラパラに仕上げましょう。",
+                icon: "🍚",
+                time: "約10分",
+                timeMinutes: 10,
+                steps: [
+                    "ねぎ、お肉（またはハム）をみじん切りにする",
+                    "フライパンに油を強火で熱し、溶き卵を流し入れたらすぐにご飯を加えて混ぜ合わせる",
+                    "具材を加えてさらに炒め、鶏ガラスープの素と塩こしょうを振る",
+                    "最後に鍋肌から醤油を回し入れて香りをつけ、サッと混ぜる"
+                ]
+            },
+            {
+                id: "recipe_08",
+                genre: "和食",
+                name: "具だくさん豚汁",
+                tags: ["お肉", "肉", "豚肉", "大根", "にんじん", "ごぼう", "こんにゃく", "ねぎ", "味噌", "みそ", "豆腐"],
+                ingredientsText: "豚肉、大根、にんじん、その他根菜やこんにゃく",
+                seasonings: [
+                    "味噌: 大さじ3〜4（お好みで）",
+                    "和風だしの素: 小さじ1",
+                    "水: 600ml",
+                    "ごま油: 大さじ1"
+                ],
+                message: "具だくさんの豚汁で体もポカポカ！これ一杯で立派なおかずになりますよ。",
+                icon: "🥣",
+                time: "約25分",
+                timeMinutes: 25,
+                steps: [
+                    "野菜、こんにゃく、豚肉を食べやすい大きさに切る",
+                    "鍋にごま油を熱し、豚肉と野菜を軽く炒める",
+                    "水とだしの素を加えて、野菜が柔らかくなるまで中火で煮る",
+                    "アクを取り、火を止めて味噌を溶かし入れる"
+                ]
+            },
+            {
+                id: "recipe_09",
+                genre: "洋食",
+                name: "クリームシチュー",
+                tags: ["お肉", "肉", "鶏肉", "豚肉", "にんじん", "じゃがいも", "玉ねぎ", "ブロッコリー", "牛乳", "ルー", "ほうれん草"],
+                ingredientsText: "鶏肉、にんじん、じゃがいも、玉ねぎ",
+                seasonings: [
+                    "シチュールー: 1/2箱",
+                    "水: 400ml",
+                    "牛乳: 100ml",
+                    "サラダ油 または バター: 大さじ1"
+                ],
+                message: "クリーミーなシチューでほっと一息。パンにつけても、ご飯にかけても美味しいですね。",
+                icon: "🥣",
+                time: "約30分",
+                timeMinutes: 30,
+                steps: [
+                    "鶏肉と野菜を一口大に切る",
+                    "鍋で油（またはバター）を熱し、鶏肉と野菜を炒める",
+                    "水を加えてアクを取りつつ、具材が柔らかくなるまで約15分煮込む",
+                    "火を止めルーを溶かし入れ、牛乳を加えてとろみがつくまで弱火で5分ほど煮る"
+                ]
+            },
+            {
+                id: "recipe_10",
+                genre: "洋食",
+                name: "トマトソースパスタ",
+                tags: ["パスタ", "スパゲッティ", "麺", "トマト", "トマト缶", "玉ねぎ", "にんにく", "お肉", "ベーコン", "ひき肉"],
+                ingredientsText: "パスタ、トマト（またはトマト缶）、玉ねぎ、ベーコン等",
+                seasonings: [
+                    "オリーブオイル: 大さじ1",
+                    "にんにくチューブ: 2cm",
+                    "コンソメ: 小さじ1",
+                    "塩こしょう: 少々",
+                    "ケチャップ: 大さじ1（コク出し）"
+                ],
+                message: "トマトの酸味が爽やかなパスタ！粉チーズをたっぷりかけて召し上がれ。",
+                icon: "🍝",
+                time: "約15分",
+                timeMinutes: 15,
+                steps: [
+                    "パスタをパッケージの表示通りに茹で始める",
+                    "フライパンでオリーブオイルとにんにくを熱し、玉ねぎとベーコンを炒める",
+                    "トマト（またはトマト缶）、コンソメ、ケチャップを加えて少し煮詰める",
+                    "塩こしょうで味を調え、茹で上がったパスタをソースに絡める"
+                ]
+            }
+        ];
+
+        // --- 2. 状態管理（お気に入りと検索結果） ---
+        let favoriteIds = JSON.parse(localStorage.getItem('recipeFavorites')) || [];
+        let currentMatchedRecipes = []; // 現在の検索結果を保持
+        let sortedAndFilteredRecipes = []; // フィルタとソート後の全レシピ
+        let currentDisplayLimit = 3; // 一度に表示する件数
+
+        const inputField = document.getElementById('ingredientsInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const loadingArea = document.getElementById('loadingArea');
+        const resultArea = document.getElementById('resultArea');
+        const recipeList = document.getElementById('recipeList');
+        const sortSelect = document.getElementById('sortSelect');
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        const genreRadios = document.querySelectorAll('input[name="genre"]');
+
+        // --- 3. イベントリスナー ---
+        searchBtn.addEventListener('click', () => {
+            const rawInput = inputField.value.trim();
+            if (rawInput === '') {
+                alert('食材を入力してください！');
+                return;
+            }
+
+            resultArea.classList.add('hidden');
+            loadingArea.classList.remove('hidden');
+            recipeList.innerHTML = ''; 
+            if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
+
+            setTimeout(() => {
+                executeSearch(rawInput);
+                loadingArea.classList.add('hidden');
+                resultArea.classList.remove('hidden');
+            }, 600);
+        });
+
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchBtn.click();
+        });
+
+        // 並び替え（ソート）が変更された時
+        if (sortSelect) {
+            sortSelect.addEventListener('change', () => {
+                applyFiltersAndSort();
+            });
+        }
+
+        // ジャンルが変更された時
+        if (genreRadios) {
+            genreRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if(currentMatchedRecipes.length > 0) {
+                        applyFiltersAndSort();
+                    }
+                });
+            });
+        }
+
+        // もっと表示ボタンが押された時
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', () => {
+                currentDisplayLimit += 3;
+                renderRecipes(true); // 追記モードで描画
+            });
+        }
+
+        // --- 4. ロジック関数 ---
+        // お気に入りの追加・削除処理
+        window.toggleFavorite = function(recipeId) {
+            const index = favoriteIds.indexOf(recipeId);
+            const btn = document.getElementById(`fav-btn-${recipeId}`);
+            const icon = document.getElementById(`fav-icon-${recipeId}`);
+
+            if (index > -1) {
+                // お気に入りから削除
+                favoriteIds.splice(index, 1);
+                if(btn) btn.classList.replace('text-yellow-500', 'text-gray-400');
+                if(icon) icon.setAttribute('fill', 'none');
+            } else {
+                // お気に入りに追加
+                favoriteIds.push(recipeId);
+                if(btn) btn.classList.replace('text-gray-400', 'text-yellow-500');
+                if(icon) icon.setAttribute('fill', 'currentColor');
+            }
+            
+            // LocalStorageに保存
+            localStorage.setItem('recipeFavorites', JSON.stringify(favoriteIds));
+
+            // 「お気に入り優先」でソートしている場合は、並び順が変わるため再描画
+            if (sortSelect && sortSelect.value === 'favorite') {
+                // 追記ではなくリセットして再描画
+                applyFiltersAndSort(false); 
+            }
+        };
+
+        // 検索を実行し、結果を保持する
+        function executeSearch(inputString) {
+            const userIngredients = inputString.split(/[\s,、]+/).filter(i => i.length > 0);
+
+            const scoredRecipes = recipes.map(recipe => {
+                let score = 0;
+                let matchedWords = [];
+
+                userIngredients.forEach(userInput => {
+                    const isMatch = recipe.tags.some(tag => tag.includes(userInput) || userInput.includes(tag));
+                    if (isMatch) {
+                        score++;
+                        matchedWords.push(userInput);
+                    }
+                });
+                return { ...recipe, score, matchedWords };
+            });
+
+            // スコア1以上のものを保持
+            currentMatchedRecipes = scoredRecipes.filter(r => r.score > 0);
+            
+            // フィルタとソートを適用して画面に描画
+            applyFiltersAndSort();
+        }
+
+        // 現在の条件に従ってフィルタリングと並び替えを行う
+        function applyFiltersAndSort(withAnimation = true) {
+            let sortType = 'score';
+            if (sortSelect) sortType = sortSelect.value;
+            
+            let selectedGenre = 'all';
+            const checkedGenreRadio = document.querySelector('input[name="genre"]:checked');
+            if (checkedGenreRadio) {
+                selectedGenre = checkedGenreRadio.value;
+            }
+
+            // 1. ジャンルでフィルタリング
+            let filtered = currentMatchedRecipes;
+            if (selectedGenre !== 'all') {
+                filtered = currentMatchedRecipes.filter(r => r.genre === selectedGenre);
+            }
+
+            // 2. ソート処理
+            filtered.sort((a, b) => {
+                if (sortType === 'score') {
+                    // おすすめ順（スコア順、同点ならお気に入り優先）
+                    if (b.score !== a.score) return b.score - a.score;
+                    const aFav = favoriteIds.includes(a.id) ? 1 : 0;
+                    const bFav = favoriteIds.includes(b.id) ? 1 : 0;
+                    return bFav - aFav;
+                } else if (sortType === 'time') {
+                    // 時間が短い順（時間が同じならスコア順）
+                    if (a.timeMinutes !== b.timeMinutes) return a.timeMinutes - b.timeMinutes;
+                    return b.score - a.score;
+                } else if (sortType === 'favorite') {
+                    // お気に入り優先（お気に入り状態が同じならスコア順）
+                    const aFav = favoriteIds.includes(a.id) ? 1 : 0;
+                    const bFav = favoriteIds.includes(b.id) ? 1 : 0;
+                    if (bFav !== aFav) return bFav - aFav;
+                    return b.score - a.score;
+                }
+                return 0;
+            });
+
+            sortedAndFilteredRecipes = filtered;
+            currentDisplayLimit = 3; // フィルタ変更時は表示件数をリセット
+            renderRecipes(false, withAnimation);
+        }
+
+        // 画面にレシピを描画する
+        function renderRecipes(isAppend = false, withAnimation = true) {
+            if (!isAppend) {
+                recipeList.innerHTML = ''; // 追記でない場合はクリア
+            }
+
+            if (sortedAndFilteredRecipes.length === 0) {
+                renderNotFound();
+                if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
+                return;
+            }
+
+            const startIdx = isAppend ? currentDisplayLimit - 3 : 0;
+            const endIdx = currentDisplayLimit;
+            const recipesToDisplay = sortedAndFilteredRecipes.slice(startIdx, endIdx);
+            
+            recipesToDisplay.forEach((recipe, index) => {
+                const isFav = favoriteIds.includes(recipe.id);
+                const animClass = withAnimation ? 'animate-fade-in' : '';
+                const delay = withAnimation ? index * 100 : 0;
+                
+                const stepsHTML = recipe.steps.map(step => `<li class="mb-1">${step}</li>`).join('');
+                const seasoningsHTML = recipe.seasonings.map(s => `<li class="mb-1">${s}</li>`).join('');
+
+                const cardHTML = `
+                    <div class="bg-white rounded-2xl p-5 md:p-6 shadow-md border-l-8 border-orange-500 ${animClass}" style="animation-delay: ${delay}ms; ${withAnimation ? 'opacity: 0; fill-mode: forwards;' : ''}">
+                        <div class="flex items-start gap-4">
+                            <div class="text-4xl md:text-5xl bg-orange-50 rounded-2xl p-3 shadow-sm hidden sm:block">${recipe.icon}</div>
+                            <div class="flex-1 w-full">
+                                
+                                <!-- タイトルとボタンの行 -->
+                                <div class="flex items-start justify-between mb-2 gap-2 w-full">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-3xl sm:hidden">${recipe.icon}</span>
+                                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 leading-tight">${recipe.name}</h3>
+                                    </div>
+                                    
+                                    <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
+                                        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded">
+                                            ${recipe.genre}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                                            ⏱️ ${recipe.time}
+                                        </span>
+                                        <button id="fav-btn-${recipe.id}" onclick="toggleFavorite('${recipe.id}')" class="${isFav ? 'text-yellow-500' : 'text-gray-400'} hover:scale-110 transition-transform p-1" title="お気に入りに追加/解除">
+                                            <svg id="fav-icon-${recipe.id}" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-gray-600 mb-4 leading-relaxed text-sm md:text-base">${recipe.message}</p>
+                                
+                                <div class="bg-orange-50 rounded-xl p-4 text-sm md:text-base border border-orange-100">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <!-- 材料 -->
+                                        <div>
+                                            <span class="font-bold text-orange-700 block mb-1">🥬 主な材料</span>
+                                            <span class="text-gray-700">${recipe.ingredientsText}</span>
+                                        </div>
+                                        <!-- 調味料 -->
+                                        <div>
+                                            <span class="font-bold text-orange-700 block mb-1">🧂 味付け・調味料</span>
+                                            <ul class="list-disc list-inside text-gray-700">
+                                                ${seasoningsHTML}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 作り方 -->
+                                    <div class="border-t border-orange-200 pt-3">
+                                        <span class="font-bold text-orange-700 block mb-2">🍳 作り方</span>
+                                        <ol class="list-decimal list-inside text-gray-700 pl-1 space-y-1">
+                                            ${stepsHTML}
+                                        </ol>
+                                    </div>
+                                </div>
+                                
+                                ${recipe.matchedWords.length > 0 ? `<p class="text-sm text-orange-500 mt-3 font-bold">✨ あなたの食材「${recipe.matchedWords.join(', ')}」が使えます！</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                recipeList.insertAdjacentHTML('beforeend', cardHTML);
+            });
+
+            // もっと表示ボタンの表示/非表示を切り替え
+            if (loadMoreBtn) {
+                if (endIdx < sortedAndFilteredRecipes.length) {
+                    loadMoreBtn.classList.remove('hidden');
+                } else {
+                    loadMoreBtn.classList.add('hidden');
+                }
+            }
+        }
+
+        function renderNotFound() {
+            const notFoundHTML = `
+                <div class="bg-white rounded-2xl p-6 md:p-8 shadow-md border-l-8 border-gray-300 text-center animate-fade-in">
+                    <div class="text-5xl mb-4">🤔</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">ぴったりなレシピが見つかりませんでした...</h3>
+                    <p class="text-gray-600">
+                        でも大丈夫！<br>
+                        シンプルにフライパンで炒めて、<b>「塩こしょう」や「ポン酢」</b>で味付けするだけでも立派なおかずになりますよ！
+                    </p>
+                </div>
+            `;
+            recipeList.insertAdjacentHTML('beforeend', notFoundHTML);
+        }
+    </script>
+</body>
+</html>
