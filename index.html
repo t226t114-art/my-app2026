@@ -27,11 +27,30 @@
     
     <!-- ヘッダー -->
     <header class="bg-orange-500 text-white shadow-md sticky top-0 z-10">
-        <div class="max-w-3xl mx-auto p-4 flex items-center justify-center gap-2">
-            <span class="text-3xl">🍳</span>
-            <h1 class="text-xl md:text-2xl font-bold tracking-wider">今日のご飯メーカー</h1>
+        <div class="max-w-3xl mx-auto p-4 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-3xl">🍳</span>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wider">今日のご飯メーカー</h1>
+            </div>
+            <!-- BGM切替ボタン -->
+            <button id="bgmToggle" class="bg-orange-600 hover:bg-orange-700 p-2 rounded-full transition-colors flex items-center gap-2 text-sm">
+                <span id="bgmIcon">🎵</span>
+                <span id="bgmText" class="hidden md:inline">BGM OFF</span>
+            </button>
         </div>
     </header>
+
+    <!-- BGM用オーディオ要素 -->
+    <audio id="bgm" src="Warm_Water_Slow_Knife.mp3" loop></audio>
+
+    <!-- ヒーローセクション -->
+    <div class="w-full h-48 md:h-64 bg-cover bg-center relative" style="background-image: url('image.png');">
+        <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <h2 class="text-white text-3xl md:text-4xl font-bold text-center px-4 drop-shadow-lg">
+                今日、何食べる？
+            </h2>
+        </div>
+    </div>
 
     <main class="max-w-3xl mx-auto p-4 md:p-6 py-8 md:py-12 w-full flex-grow">
         <!-- 入力エリア -->
@@ -3235,6 +3254,25 @@
         const freeMemo = document.getElementById('freeMemo');
         const memoStatus = document.getElementById('memoStatus');
         const clearMemoBtn = document.getElementById('clearMemoBtn');
+        const bgm = document.getElementById('bgm');
+        const bgmToggle = document.getElementById('bgmToggle');
+        const bgmIcon = document.getElementById('bgmIcon');
+        const bgmText = document.getElementById('bgmText');
+
+        // BGM切替
+        bgmToggle.addEventListener('click', () => {
+            if (bgm.paused) {
+                bgm.play().catch(e => console.log("Audio play failed:", e));
+                bgmIcon.textContent = '⏸️';
+                bgmText.textContent = 'BGM ON';
+                bgmToggle.classList.replace('bg-orange-600', 'bg-orange-700');
+            } else {
+                bgm.pause();
+                bgmIcon.textContent = '🎵';
+                bgmText.textContent = 'BGM OFF';
+                bgmToggle.classList.replace('bg-orange-700', 'bg-orange-600');
+            }
+        });
 
         // メモの読み込みと自動保存ロジック
         freeMemo.value = localStorage.getItem('recipe_free_memo') || '';
